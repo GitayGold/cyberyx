@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useGLTF, Environment, useAnimations } from "@react-three/drei";
+import { useGLTF, Environment, useAnimations, useProgress } from "@react-three/drei";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import * as THREE from "three";
@@ -275,6 +275,153 @@ function HUD({ section }: { section: number }) {
 }
 
 // ---------------------------------------------------------------------------
+// Loading HUD — biometric scan while the GLB streams in
+// ---------------------------------------------------------------------------
+function LoadingHUD() {
+  const { progress, active, loaded, total } = useProgress();
+  const [hidden, setHidden] = useState(false);
+  const [fading, setFading] = useState(false);
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    if (!active && progress >= 100 && !firedRef.current) {
+      firedRef.current = true;
+      console.log("Model Loaded!");
+      // Brief delay so the bar visibly hits 100% before fade
+      const t1 = setTimeout(() => setFading(true), 250);
+      const t2 = setTimeout(() => setHidden(true), 950);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+  }, [active, progress]);
+
+  if (hidden) return null;
+
+  const pct = Math.min(100, Math.round(progress));
+  const kb  = total ? `${(loaded / 1024).toFixed(0)} / ${(total / 1024).toFixed(0)} KB` : "ESTABLISHING LINK…";
+
+  return (
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center select-none ${fading ? "loader-fade-out" : ""}`}
+      style={{
+        background:
+          "radial-gradient(ellipse at 50% 50%, rgba(0,20,40,0.85) 0%, rgba(0,0,0,0.97) 70%)",
+      }}
+    >
+      {/* Scanline overlay matching the page aesthetic */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,255,0.03) 2px, rgba(0,255,255,0.03) 4px)",
+        }}
+      />
+
+      <div className="relative flex flex-col items-center">
+        {/* Biometric scan rings */}
+        <div className="relative w-[340px] h-[340px] mb-10">
+          {/* Outer ring — slow CCW */}
+          <div className="absolute inset-0 rounded-full border border-cyan-400/30 spin-ccw pulse-ring">
+            {/* Tick marks */}
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute left-1/2 top-0 h-3 w-px bg-cyan-400/60"
+                style={{
+                  transform: `translateX(-50%) rotate(${i * 30}deg)`,
+                  transformOrigin: "50% 170px",
+                  boxShadow: "0 0 6px rgba(0,255,255,0.7)",
+                }}
+              />
+            ))}
+            {/* Corner brackets */}
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-cyan-400 text-[10px]">◈</div>
+          </div>
+
+          {/* Mid ring — CW */}
+          <div className="absolute inset-8 rounded-full border border-dashed border-cyan-400/40 spin-cw" />
+
+          {/* Inner ring — slow CW with arc gap */}
+          <div
+            className="absolute inset-16 rounded-full spin-cw"
+            style={{
+              border: "1px solid transparent",
+              borderTopColor: "#00FFFF",
+              borderRightColor: "rgba(0,255,255,0.4)",
+              boxShadow: "0 0 22px rgba(0,255,255,0.45)",
+              animationDuration: "3.5s",
+            }}
+          />
+
+          {/* Vertical scan beam */}
+          <div className="absolute inset-16 rounded-full overflow-hidden">
+            <div
+              className="absolute inset-x-0 h-[2px] scan-sweep"
+              style={{
+                background:
+                  "linear-gradient(to right, transparent, #00FFFF 50%, transparent)",
+                boxShadow: "0 0 18px #00FFFF, 0 0 40px rgba(0,255,255,0.5)",
+              }}
+            />
+          </div>
+
+          {/* Center percentage */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div
+              className="font-mono font-black text-cyan-400 text-5xl tracking-tighter"
+              style={{ textShadow: "0 0 18px rgba(0,255,255,0.7), 0 0 38px rgba(0,255,255,0.35)" }}
+            >
+              {pct.toString().padStart(2, "0")}
+              <span className="text-cyan-400/60 text-2xl">%</span>
+            </div>
+          </div>
+        </div>
+
+        {/* JACKING IN — same typographic language as CYBERYX */}
+        <h1
+          className="text-[clamp(2.5rem,6vw,5rem)] font-black text-white leading-[0.9] tracking-tight flicker-text"
+          style={{ textShadow: "0 0 40px rgba(0,255,255,0.55), 0 0 80px rgba(0,255,255,0.25)" }}
+        >
+          JACKING&nbsp;
+          <span className="text-cyan-400" style={{ textShadow: "0 0 30px rgba(0,255,255,0.8)" }}>
+            IN
+          </span>
+        </h1>
+
+        {/* Status readouts */}
+        <div className="mt-7 w-[340px] font-mono text-[10px] text-cyan-400/80 space-y-2">
+          <div className="flex justify-between">
+            <span className="text-cyan-700 tracking-[3px]">◈ NEURAL_HANDSHAKE</span>
+            <span className="text-cyan-300">{active ? "STREAMING" : "LOCKED"}</span>
+          </div>
+
+          {/* Progress bar */}
+          <div className="h-[3px] bg-zinc-900/80 relative overflow-hidden border border-cyan-400/20">
+            <div
+              className="absolute inset-y-0 left-0 transition-[width] duration-200 ease-out"
+              style={{
+                width: `${pct}%`,
+                background:
+                  "linear-gradient(to right, rgba(0,255,255,0.6), #00FFFF)",
+                boxShadow: "0 0 10px #00FFFF, 0 0 22px rgba(0,255,255,0.55)",
+              }}
+            />
+          </div>
+
+          <div className="flex justify-between pt-1">
+            <span className="text-cyan-700 tracking-[2px]">PAYLOAD</span>
+            <span className="text-cyan-500">{kb}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-cyan-700 tracking-[2px]">PROTOCOL</span>
+            <span className="text-cyan-500">CYBERYX_4.7.2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 export default function Home() {
@@ -358,6 +505,9 @@ export default function Home() {
 
       {/* ── HUD ──────────────────────────────────────────────────────── */}
       <HUD section={activeSection} />
+
+      {/* ── Loading HUD — biometric scan during GLB stream ──────────── */}
+      <LoadingHUD />
 
       {/* ── Scrollable Content ───────────────────────────────────────── */}
       <div className="scroll-container relative z-10">

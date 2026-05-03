@@ -72,3 +72,42 @@ body {
   content: "_";
   animation: blink 1s step-end infinite;
 }
+
+/* ── Loading HUD ──────────────────────────────────────────── */
+@keyframes spinCW {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes spinCCW {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes scanSweep {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+@keyframes pulseRing {
+  0%, 100% { box-shadow: 0 0 12px rgba(0,255,255,0.35), inset 0 0 12px rgba(0,255,255,0.18); }
+  50%      { box-shadow: 0 0 28px rgba(0,255,255,0.7),  inset 0 0 22px rgba(0,255,255,0.35); }
+}
+@keyframes flickerText {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    opacity: 1;
+    text-shadow: 0 0 14px rgba(0,255,255,0.7), 0 0 36px rgba(0,255,255,0.35), 0 0 70px rgba(0,255,255,0.2);
+  }
+  20%, 24%, 55% { opacity: 0.6; text-shadow: none; }
+}
+
+.spin-cw  { animation: spinCW  6s linear infinite; }
+.spin-ccw { animation: spinCCW 9s linear infinite; }
+.scan-sweep  { animation: scanSweep 2.4s ease-in-out infinite; }
+.pulse-ring  { animation: pulseRing 2.2s ease-in-out infinite; }
+.flicker-text { animation: flickerText 4s linear infinite; }
+
+.loader-fade-out {
+  opacity: 0;
+  transition: opacity 0.6s ease-out;
+  pointer-events: none;
+}
