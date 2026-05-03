@@ -323,7 +323,7 @@ export default function Home() {
       {/* ── Fixed 3-D Canvas — never scrolls ─────────────────────────── */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <Canvas
-          camera={{ position: [0, 0, 8.5], fov: 50 }}
+          camera={{ position: [0, 0, 12.75], fov: 50 }}
           gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
           dpr={[1, 1.5]}
         >
