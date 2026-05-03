@@ -6,6 +6,26 @@
       "mcp__Claude_Preview__preview_start",
       "mcp__Claude_Preview__preview_click",
       "mcp__Claude_Preview__preview_stop"
+    ],
+    "deny": [
+      "Read(**/node_modules/**)",
+      "Read(**/.next/**)",
+      "Read(**/out/**)",
+      "Read(**/build/**)",
+      "Read(**/dist/**)",
+      "Read(**/coverage/**)",
+      "Read(**/.vercel/**)",
+      "Read(**/.turbo/**)",
+      "Read(**/*.tsbuildinfo)",
+      "Edit(**/node_modules/**)",
+      "Edit(**/.next/**)",
+      "Edit(**/out/**)",
+      "Edit(**/build/**)",
+      "Edit(**/dist/**)",
+      "Bash(find /**/node_modules/**)",
+      "Bash(find /**/.next/**)",
+      "Bash(grep:* **/node_modules/**)",
+      "Bash(grep:* **/.next/**)"
     ]
   }
 }

@@ -18,9 +18,9 @@ if (typeof window !== "undefined") {
 // Character transform — posY is FIXED so the model never leaves the viewport
 const modelState = {
   rotY:         0.15,
-  posX:         0.3,
-  posY:        -0.6,
-  scaleVal:     0.65,
+  posX:         0.35,
+  posY:        -1.1,
+  scaleVal:     1.15,
   rimIntensity: 4.0,
 };
 
@@ -303,15 +303,15 @@ export default function Home() {
     })
       // Hero → Features: character turns right, moves right, rim brightens
       .to(modelState, {
-        rotY: -0.55, posX:  1.5, scaleVal: 0.6, rimIntensity: 6.5,
+        rotY: -0.55, posX:  1.5, scaleVal: 1.05, rimIntensity: 6.5,
         ease: "power1.inOut", duration: 1,
       })
       .to(modelState, {
-        rotY:  0.55, posX: -1.5, scaleVal: 0.7, rimIntensity: 9.0,
+        rotY:  0.55, posX: -1.5, scaleVal: 1.25, rimIntensity: 9.0,
         ease: "power1.inOut", duration: 1,
       })
       .to(modelState, {
-        rotY:  0.10, posX:  0.1, scaleVal: 0.65, rimIntensity: 7.0,
+        rotY:  0.10, posX:  0.1, scaleVal: 1.15, rimIntensity: 7.0,
         ease: "power1.inOut", duration: 1,
       });
 
@@ -323,7 +323,7 @@ export default function Home() {
       {/* ── Fixed 3-D Canvas — never scrolls ─────────────────────────── */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <Canvas
-          camera={{ position: [0, 0, 12.75], fov: 50 }}
+          camera={{ position: [0, 0, 5.0], fov: 50 }}
           gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
           dpr={[1, 1.5]}
         >
