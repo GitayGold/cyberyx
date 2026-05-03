@@ -27,7 +27,7 @@ const modelState = {
 // Walk-cycle time — GSAP scrubs this from 0 → TWO_PI * cycles
 const walkProxy = { t: 0 };
 
-useGLTF.preload("/model/girl_cartoon_cyber_by_oscar_creativo.glb");
+useGLTF.preload("https://drive.google.com/uc?export=download&id=16iE51vSiCo2dsk03aUoZuD43zBhfA3eg");
 
 // ---------------------------------------------------------------------------
 // Bone names — only the 4 leg bones we animate (NOT the hip — its rest
@@ -58,7 +58,7 @@ function CyberpunkModel() {
   const rimRef   = useRef<THREE.PointLight>(null!);
   const fillRef  = useRef<THREE.PointLight>(null!);
   const kickRef  = useRef<THREE.PointLight>(null!);
-  const { scene, animations } = useGLTF("/model/girl_cartoon_cyber_by_oscar_creativo.glb");
+  const { scene, animations } = useGLTF("https://drive.google.com/uc?export=download&id=16iE51vSiCo2dsk03aUoZuD43zBhfA3eg");
   const { mixer, actions, names } = useAnimations(animations, groupRef);
 
   const bRef       = useRef<BoneMap>({});
