@@ -19,13 +19,10 @@ if (typeof window !== "undefined") {
 const modelState = {
   rotY:         0.15,
   posX:         0.3,
-  posY:        -1.0,   // never changed by GSAP → character stays vertically centred
-  scaleVal:     1.25,
+  posY:        -0.6,
+  scaleVal:     0.65,
   rimIntensity: 4.0,
 };
-
-// Walk-cycle time — GSAP scrubs this from 0 → TWO_PI * cycles
-const walkProxy = { t: 0 };
 
 useGLTF.preload("https://fxqrglo3hmwc5vnx.public.blob.vercel-storage.com/girl_warrior_motorcycle_cyber_by_oscar_creativo.glb");
 
@@ -46,9 +43,6 @@ type BoneName = keyof typeof BONE_NAMES;
 type BoneMap  = Partial<Record<BoneName, THREE.Object3D>>;
 type RestQMap = Partial<Record<BoneName, THREE.Quaternion>>;
 
-// Reusable objects — allocated once to avoid GC pressure in useFrame
-const _xAxis = new THREE.Vector3(1, 0, 0);
-const _dq    = new THREE.Quaternion();
 
 // ---------------------------------------------------------------------------
 // 3D Character Component
@@ -59,7 +53,7 @@ function CyberpunkModel() {
   const fillRef  = useRef<THREE.PointLight>(null!);
   const kickRef  = useRef<THREE.PointLight>(null!);
   const { scene, animations } = useGLTF("https://fxqrglo3hmwc5vnx.public.blob.vercel-storage.com/girl_warrior_motorcycle_cyber_by_oscar_creativo.glb");
-  const { mixer, actions, names } = useAnimations(animations, groupRef);
+  const { actions, names } = useAnimations(animations, groupRef);
 
   const bRef       = useRef<BoneMap>({});
   const restQRef   = useRef<RestQMap>({});
@@ -125,14 +119,10 @@ function CyberpunkModel() {
       armDownRef.current[side] = new THREE.Quaternion().copy(parentDelta).multiply(rest);
     }
 
-    // Detect Walk clip — if found, bind and pause (GSAP scrubs mixer.time)
-    const WALK_KEYS = ["walk", "walking", "run"];
-    const walkClipName = names.find((n) =>
-      WALK_KEYS.some((kw) => n.toLowerCase().includes(kw))
-    );
-    if (walkClipName) {
-      const action = actions[walkClipName];
-      if (action) { action.play(); action.paused = true; }
+    // Play the second animation (index 1), fallback to first
+    const clipName = names[1] ?? names[0];
+    if (clipName && actions[clipName]) {
+      actions[clipName].reset().play();
     }
   }, [scene, names, actions]);
 
@@ -166,48 +156,7 @@ function CyberpunkModel() {
     if (fillRef.current)  fillRef.current.intensity  = 3.5 * flicker;
     if (kickRef.current)  kickRef.current.intensity  = 2.8 * flicker;
 
-    // ── walk animation: clip scrub OR procedural (X-axis only, ±30°)
-    const wt = walkProxy.t;
-
-    const walkClipName = names.find((n) =>
-      ["walk", "walking", "run"].some((kw) => n.toLowerCase().includes(kw))
-    );
-
-    if (walkClipName) {
-      // Scrub the mixer to scroll-driven time (wrap within clip duration)
-      const dur = actions[walkClipName]?.getClip().duration ?? 1;
-      mixer.setTime(((wt / (Math.PI * 2)) * dur) % dur);
-    } else {
-      // ── Procedural walk via DELTA QUATERNIONS ──────────────────────────
-      // WHY delta and not rotation.set():
-      //   Every mesh node in this GLB has a baked -90° X quaternion.
-      //   The hip bone balances it with a baked +90° X quaternion.
-      //   Calling rotation.set() REPLACES the baked quaternion → model folds flat.
-      //   Instead: copy the GLTF rest quaternion, then multiply a small delta on top.
-      //   This keeps the rest pose intact and adds only the walking offset.
-      const MAX   = 0.5236; // 30° hard cap
-      const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-      const sw    = Math.sin(wt);
-      const swP   = Math.sin(wt + Math.PI);
-
-      const applyDeltaX = (key: BoneName, angle: number) => {
-        const bone = bRef.current[key];
-        const rest = restQRef.current[key];
-        if (!bone || !rest) return;
-        _dq.setFromAxisAngle(_xAxis, angle);         // small rotation around local X
-        bone.quaternion.copy(rest).multiply(_dq);    // rest pose × delta (local space)
-      };
-
-      applyDeltaX("L_THI", clamp( sw  * 0.52, -MAX, MAX));
-      applyDeltaX("R_THI", clamp( swP * 0.52, -MAX, MAX));
-      applyDeltaX("L_CAL", clamp(Math.max(0, -sw) * 0.85 + 0.05, 0, MAX));
-      applyDeltaX("R_CAL", clamp(Math.max(0,  sw) * 0.85 + 0.05, 0, MAX));
-
-      // Arms: apply pre-computed "arms-down" quaternion (calculated once at load)
-      const { L: lArmDown, R: rArmDown } = armDownRef.current;
-      if (bRef.current.L_ARM && lArmDown) bRef.current.L_ARM.quaternion.copy(lArmDown);
-      if (bRef.current.R_ARM && rArmDown) bRef.current.R_ARM.quaternion.copy(rArmDown);
-    }
+    // Animation plays freely via mixer — no manual scrub needed
   });
 
   return (
@@ -343,22 +292,7 @@ export default function Home() {
       });
     });
 
-    // ── Walk animation: scrub walkProxy.t from 0 → 2π × 5 (5 full cycles)
-    // scrub: 1.2 keeps it smooth and slightly lag-damped.
-    // When scroll stops, GSAP freezes walkProxy.t at the current frame → character pauses mid-step.
-    gsap.to(walkProxy, {
-      t: Math.PI * 10, // 5 complete walk cycles across the full page
-      ease: "none",
-      scrollTrigger: {
-        trigger: ".scroll-container",
-        start: "top top",
-        end: "bottom bottom",
-        scrub: 1,
-      },
-    });
-
-    // ── Character horizontal & lighting transitions (posY intentionally absent)
-    // The character stays vertically fixed at posY = -1.0 throughout.
+    // ── Character horizontal & lighting transitions
     gsap.timeline({
       scrollTrigger: {
         trigger: ".scroll-container",
@@ -369,17 +303,15 @@ export default function Home() {
     })
       // Hero → Features: character turns right, moves right, rim brightens
       .to(modelState, {
-        rotY: -0.55, posX:  1.5, scaleVal: 1.2, rimIntensity: 6.5,
+        rotY: -0.55, posX:  1.5, scaleVal: 0.6, rimIntensity: 6.5,
         ease: "power1.inOut", duration: 1,
       })
-      // Features → Specs: character turns left, moves left, rim peaks
       .to(modelState, {
-        rotY:  0.55, posX: -1.5, scaleVal: 1.3, rimIntensity: 9.0,
+        rotY:  0.55, posX: -1.5, scaleVal: 0.7, rimIntensity: 9.0,
         ease: "power1.inOut", duration: 1,
       })
-      // Specs → Contact: character faces forward, centres
       .to(modelState, {
-        rotY:  0.10, posX:  0.1, scaleVal: 1.25, rimIntensity: 7.0,
+        rotY:  0.10, posX:  0.1, scaleVal: 0.65, rimIntensity: 7.0,
         ease: "power1.inOut", duration: 1,
       });
 
@@ -391,7 +323,7 @@ export default function Home() {
       {/* ── Fixed 3-D Canvas — never scrolls ─────────────────────────── */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <Canvas
-          camera={{ position: [0, 0, 4.8], fov: 45 }}
+          camera={{ position: [0, 0, 8.5], fov: 50 }}
           gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
           dpr={[1, 1.5]}
         >
